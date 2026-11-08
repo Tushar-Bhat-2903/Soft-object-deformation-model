@@ -1,11 +1,12 @@
 """validate_holdout.py
 
-Predict a held-out clip (a fresh instance of the same interaction) with the fitted model and compare with
-the video. Also reports a 1D exponential-recovery baseline fitted on the same training clips, so you can
-see whether the 3D model earns its complexity, and a parameter-uncertainty band.
+Tests the fitted model on a clip it has never seen, to get an honest read on the fit (scoring
+against the training data always looks better than it should). Only the plate's measured motion
+is taken from the held-out clip; the object's response is predicted, then compared to the video.
 
-The held-out clip is NOT used in fitting. The only input taken from it is the measured plate motion
-(kinematic) or the weight timing (load): what the user did. The material response is predicted.
+Also fits a much dumber baseline (a single exponential recovery curve) so you can tell whether
+the 3D model is actually earning its complexity, and builds an uncertainty band by resampling
+the fitted parameters within their estimated error.
 
 Usage:
   python validate_holdout.py --fit fit.json --clip holdout.npz --out holdout
@@ -20,7 +21,7 @@ from fitlib import load_clip, run_clip, free_mask
 
 
 def exp_baseline_tau(train_clips):
-    """Fit one time constant tau1 for h(t) = h_rest - (h_rest - h_release) exp(-(t - t_r)/tau1)."""
+    """Fit the single time constant for the dumb baseline (exponential recovery after release)."""
     def cost(tau):
         s = 0.0
         for c in train_clips:
