@@ -1,4 +1,5 @@
-"""fitlib.py - shared helpers: load a clip, build the simulation scenario, compute residuals."""
+"""fitlib.py - shared helpers used by fit_params.py, validate_holdout.py and make_demo.py:
+loading a clip, turning it into a simulation scenario, and scoring a simulation against it."""
 import numpy as np
 
 from deform_sim import Block, simulate
@@ -7,6 +8,7 @@ XIS = (0.2, 0.5, 0.8)
 
 
 def load_clip(path, stride=2):
+    """Load a .npz from extract_signals.py. stride > 1 skips frames to speed up fitting."""
     z = np.load(path, allow_pickle=False)
     c = {k: z[k] for k in z.files}
     c["mode"] = str(c["mode"])
@@ -17,6 +19,7 @@ def load_clip(path, stride=2):
 
 
 def scenario_of(c):
+    """Turn a loaded clip into the scenario dict simulate() expects (metres, not mm)."""
     idx = c["idx"]
     sc = {"t": c["t"][idx] - c["t"][idx][0], "mode": c["mode"]}
     if c["mode"] == "kinematic":
@@ -28,6 +31,7 @@ def scenario_of(c):
 
 
 def block_of(c, mesh):
+    """Build the mesh at this clip's measured size, at the given resolution."""
     return Block(float(c["W_mm"]) * 1e-3, float(c["D_mm"]) * 1e-3, float(c["H0_mm"]) * 1e-3, *mesh)
 
 
@@ -41,7 +45,8 @@ def free_mask(c):
 
 
 def run_clip(args):
-    """Worker: simulate one clip. args = (clip, E, nu, zeta, mesh, substeps, keep_states)."""
+    """Runs one clip through the simulator. Takes a plain tuple, not kwargs, since this gets
+    sent to a worker process during fitting."""
     c, E, nu, zeta, mesh, substeps, keep = args[:7]
     pset = args[7] if len(args) > 7 else 0.0
     b = block_of(c, mesh)
@@ -52,6 +57,7 @@ def run_clip(args):
 
 
 def residuals_of(c, r, sigma_h, sigma_w):
+    """How far the simulation is from the video, in units of the assumed measurement noise."""
     idx = c["idx"]
     hobs = c["h_mm"][idx]
     wobs = c["widths_mm"][idx]
