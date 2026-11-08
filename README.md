@@ -18,7 +18,7 @@ when squeezed). There's also a damping/drag term `zeta` that controls how fast i
 rather than bouncing forever.
 
 The bottom of the block is glued to the table. A flat plate presses the top down and then lifts
-away. I ignore inertia (the sponge is too light and slow-moving for that to matter) — it just
+away. I ignore inertia, since the sponge is too light and slow-moving for that to matter; it just
 relaxes back according to its stiffness and damping, like a spring in honey.
 
 I also added one extra piece specific to this real sponge: after a hard press it didn't fully
@@ -27,8 +27,8 @@ deep press, instead of always snapping back to exactly where it started.
 
 ## 2. What the 3D mesh actually looks like
 
-The block above isn't just a flat side-view shape — it's a real 3D grid of points (150 of them,
-connected into little tetrahedra), simulated in all three dimensions. The image below renders
+The block above isn't just a flat side-view shape. It's a real 3D grid of points, 150 of them,
+connected into little tetrahedra and simulated in all three dimensions. The image below renders
 that mesh from an angle at four moments of a real press: at rest, at the deepest point of the
 press, right after the plate lifts off, and once it's settled.
 
@@ -66,22 +66,22 @@ separate clip the fit never saw.
 
 ## 5. Results
 
-**Object:** a rectangular foam sponge, ~70 mm wide, ~56 mm tall, single material throughout.
+The object is a rectangular foam sponge, about 70 mm wide and 56 mm tall, single material
+throughout.
 
-**Fitted from two training clips:**
+Fitted from two training clips:
 - Poisson's ratio: 0.06 (fairly tightly determined)
 - Recovery time: about 0.66 seconds
 - "Permanent set" amount: about 10% of the deepest press depth
-- Stiffness: fixed at 30 kPa (an assumption — no weight clip was filmed, so this wasn't measured)
+- Stiffness: fixed at 30 kPa, an assumption, since no weight clip was filmed so this wasn't measured
 
-**Tested on a held-out clip the fit never saw:**
-- The model predicted the recovery height to within about 4.7 mm of the real video.
-- That's only slightly better than the simplest possible comparison (a one-number exponential
-  recovery curve), which also got about 4.8 mm.
+Tested on a held-out clip the fit never saw, the model predicted the recovery height to within
+about 4.7 mm of the real video. That's only slightly better than the simplest possible
+comparison, a one-number exponential recovery curve, which got about 4.8 mm.
 
-**Being honest about this:** the model works and runs end to end, but it isn't a strong fit. I
-pressed the sponge too deep in all three clips (past the depth where this kind of model is
-expected to stay accurate), so this result mostly shows the model's behaviour outside its comfort
+I'll be honest about this one: the model works and runs end to end, but it isn't a strong fit. I
+pressed the sponge too deep in all three clips, past the depth where this kind of model is
+expected to stay accurate, so this result mostly shows the model's behaviour outside its comfort
 zone rather than a clean validation. See `real/` for the figures and the side-by-side demo video
 (`real/demo_final.mp4`).
 
@@ -99,12 +99,12 @@ zone rather than a clean validation. See `real/` for the figures and the side-by
 
 ## 7. What it can and can't do
 
-**Can:** show a soft block compressing and springing back, bulging sideways, and (approximately)
-not fully recovering after a hard press.
+It can show a soft block compressing and springing back, bulging sideways, and roughly not fully
+recovering after a hard press.
 
-**Can't:** capture real foam's more complex behaviour — energy loss between presses, getting
-stiffer if pressed fast, sliding/friction effects, or anything not visible from one camera angle
-(since only the outline is measured, nothing inside the sponge is actually observed).
+It can't capture real foam's more complex behaviour: energy loss between presses, getting
+stiffer if pressed fast, sliding/friction effects, or anything not visible from one camera angle.
+Only the outline is measured, so nothing inside the sponge is actually observed.
 
 ## 8. Interactive demo
 
