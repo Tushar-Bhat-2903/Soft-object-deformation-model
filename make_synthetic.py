@@ -1,9 +1,10 @@
 """make_synthetic.py
 
-Create synthetic side-view videos from the simulator with KNOWN material parameters, to test the whole
-pipeline (video -> signals -> fit -> held-out prediction). The truth uses a finer mesh than the fit does,
-so the test is not completely circular, but it is still the same family of model: see README, 'Limits of
-the synthetic test'.
+A sanity check run before trusting any of this on real footage: generate fake videos from the
+simulator with known material parameters (TRUTH below), then run them through the whole
+pipeline and check whether the fit recovers something close to TRUTH. Uses a finer mesh for the
+"truth" videos than the fit itself uses, so it's not a completely circular test - though it only
+proves the pipeline's plumbing works, not that the model matches real foam.
 
 Usage:  python make_synthetic.py --out synth
 """
@@ -19,7 +20,7 @@ from deform_sim import Block, simulate, make_press_scenario
 W_MM, D_MM, H_MM = 60.0, 60.0, 50.0
 PX_PER_MM = 5.0
 FPS = 60
-TRUTH = {"E_Pa": 15e3, "nu": 0.30, "zeta": 1.2e6}
+TRUTH = {"E_Pa": 15e3, "nu": 0.30, "zeta": 1.2e6}  # made-up numbers; the fit has to recover them
 FRAME = (720, 1280)
 CX, YBOT = 640, 600
 
