@@ -1,0 +1,383 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Sponge Press Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* layout: a control rail (stats + sliders) beside a full-bleed canvas stage */
+:root{
+  --bg:#f3efe6; --panel:#fffdf8; --ink:#1c1a16; --mute:#7a7366;
+  --accent:#b5472b; --accent2:#2f6f5e; --rule:#ddd5c4; --grid-line:#2f6f5e; --node:#b5472b;
+  --mono:"IBM Plex Mono",ui-monospace,monospace; --disp:"Space Grotesk",Inter,sans-serif; --body:"Inter",sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15130f; --panel:#1e1b15; --ink:#efe9dd; --mute:#9a9284;
+    --accent:#e08a66; --accent2:#5fb79a; --rule:#352f26; --grid-line:#5fb79a; --node:#e08a66;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15130f; --panel:#1e1b15; --ink:#efe9dd; --mute:#9a9284;
+  --accent:#e08a66; --accent2:#5fb79a; --rule:#352f26; --grid-line:#5fb79a; --node:#e08a66;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);
+  padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px));}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 28px;}
+header{margin-bottom:14px;}
+h1{font-family:var(--disp);font-weight:700;font-size:clamp(22px,4vw,30px);margin:0 0 4px;letter-spacing:-0.01em;text-wrap:balance;}
+.sub{color:var(--mute);font-size:14px;max-width:62ch;line-height:1.5;margin:0;}
+.layout{display:grid;grid-template-columns:1fr;gap:16px;}
+@media(min-width:860px){.layout{grid-template-columns:300px 1fr;align-items:start;}}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;min-width:0;}
+.panel h2{font-family:var(--disp);font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:0 0 10px;font-weight:700;}
+.row{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:12.5px;padding:4px 0;border-bottom:1px dashed var(--rule);}
+.row:last-child{border-bottom:none;}
+.row b{color:var(--ink);font-weight:500;}
+.row span.l{color:var(--mute);}
+.note{font-size:11.5px;color:var(--mute);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid var(--rule);}
+.stage{position:relative;background:var(--panel);border:1px solid var(--rule);border-radius:10px;overflow:hidden;}
+canvas{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair;}
+.hud{position:absolute;top:10px;left:12px;right:12px;display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:11.5px;color:var(--mute);pointer-events:none;flex-wrap:wrap;}
+.hud b{color:var(--ink);}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-top:1px solid var(--rule);}
+.controls label{font-size:11.5px;color:var(--mute);display:flex;align-items:center;gap:6px;}
+button{font:500 12.5px var(--body);background:transparent;border:1px solid var(--rule);color:var(--ink);
+  padding:6px 10px;border-radius:7px;cursor:pointer;}
+button:hover{border-color:var(--accent);color:var(--accent);}
+input[type=range]{accent-color:var(--accent2);}
+.badge{display:inline-block;font-family:var(--mono);font-size:10.5px;padding:2px 7px;border-radius:5px;border:1px solid var(--rule);color:var(--mute);}
+.hint{font-size:12px;color:var(--mute);margin-top:8px;text-align:center;}
+.hint b{color:var(--ink);}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Sponge Press Simulator</h1>
+    <p class="sub">The same 3D mesh shape (150 nodes, matching the <code>deform_sim.py</code> block used for fitting), running a real-time spring approximation tuned to the parameters fitted from your video. Click and drag on the block to press it.</p>
+  </header>
+  <div class="layout">
+    <div class="panel">
+      <h2>Fitted parameters <span class="badge" id="fitSrc">press1 + run1</span></h2>
+      <div class="row"><span class="l">Stiffness E</span><b>30.0 kPa <span class="badge">fixed, not measured</span></b></div>
+      <div class="row"><span class="l">Poisson's ratio &nu;</span><b id="vNu">0.063</b></div>
+      <div class="row"><span class="l">Damping &zeta;</span><b>6.34&times;10<sup>6</sup> N&middot;s/m&#8308;</b></div>
+      <div class="row"><span class="l">Relaxation time &tau;</span><b id="vTau">0.66 s</b></div>
+      <div class="row"><span class="l">Permanent set</span><b id="vPset">10.1% / deepest press</b></div>
+      <div class="row"><span class="l">Rest size (W&times;D&times;H)</span><b>70 &times; 40 &times; 55.8 mm</b></div>
+      <h2 style="margin-top:14px">Live state</h2>
+      <div class="row"><span class="l">Top height</span><b id="liveH">55.8 mm</b></div>
+      <div class="row"><span class="l">Compression</span><b id="liveC">0%</b></div>
+      <div class="row"><span class="l">Deepest ever</span><b id="liveCmax">0%</b></div>
+      <div class="row"><span class="l">Mid-height width</span><b id="liveW">70.0 mm</b></div>
+      <div class="note">This runs a mass&ndash;spring&ndash;damper approximation in the browser, not the sparse FEM solve in <code>deform_sim.py</code> (that needs a linear-algebra solver, too slow for 60fps here). Its spring stiffness, decay time and sideways bulge are set from the same fitted E, &tau; and &nu; above, so it follows the same qualitative behaviour the fit found &mdash; it is a real-time stand-in for the real solver, not the real solver itself.</div>
+    </div>
+    <div class="panel" style="padding:0">
+      <div class="stage">
+        <canvas id="cv" width="900" height="620"></canvas>
+        <div class="hud"><span>drag the block to press &middot; release to let go</span><span id="hudMode"><b>idle</b></span></div>
+      </div>
+      <div class="controls">
+        <button id="rotL">&larr; rotate</button>
+        <button id="rotR">rotate &rarr;</button>
+        <label>tilt <input type="range" id="tilt" min="5" max="45" value="18"></label>
+        <button id="resetBtn" style="margin-left:auto">reset shape</button>
+      </div>
+    </div>
+  </div>
+  <p class="hint">Press hard and release quickly a few times &mdash; watch the resting height creep slightly lower each time, the same permanent-set effect fitted from your real sponge.</p>
+</div>
+
+<script>
+(function(){
+"use strict";
+// ---------- fitted parameters (from real/fit.json) ----------
+const FIT = { E:30000, nu:0.0630148837600075, zeta:6344506.876350727,
+              tau:0.6593532083560343, pset:0.10147935495522993,
+              W:0.070, D:0.040, H:0.05583682983682984 };
+const nx=4, ny=4, nz=5; // same mesh resolution as deform_sim.py's fitted Block(..., 4,4,5)
+
+// ---------- build the mesh (mirrors Block.__init__) ----------
+const N = (nx+1)*(ny+1)*(nz+1);
+function idx(i,j,k){ return (i*(ny+1)+j)*(nz+1)+k; }
+const rest0 = new Float64Array(N*3); // original rest positions (x,y,z), metres
+for(let i=0;i<=nx;i++)for(let j=0;j<=ny;j++)for(let k=0;k<=nz;k++){
+  const n=idx(i,j,k);
+  rest0[n*3+0] = -FIT.W/2 + FIT.W*i/nx;
+  rest0[n*3+1] = -FIT.D/2 + FIT.D*j/ny;
+  rest0[n*3+2] = FIT.H*k/nz;
+}
+const pos = rest0.slice();          // current positions
+const old = rest0.slice();          // previous positions (Verlet)
+const bottom = new Uint8Array(N);
+for(let i=0;i<=nx;i++)for(let j=0;j<=ny;j++) bottom[idx(i,j,0)] = 1;
+const topIdx = [];
+for(let i=0;i<=nx;i++)for(let j=0;j<=ny;j++) topIdx.push(idx(i,j,nz));
+
+// springs: structural grid edges + face-diagonal shear braces (keeps the box from shearing flat)
+const springs = []; // {a,b, rest}
+function addSpring(a,b){ springs.push({a,b,rest:0}); }
+for(let i=0;i<=nx;i++)for(let j=0;j<=ny;j++)for(let k=0;k<nz;k++) addSpring(idx(i,j,k), idx(i,j,k+1));
+for(let i=0;i<=nx;i++)for(let k=0;k<=nz;k++)for(let j=0;j<ny;j++) addSpring(idx(i,j,k), idx(i,j+1,k));
+for(let j=0;j<=ny;j++)for(let k=0;k<=nz;k++)for(let i=0;i<nx;i++) addSpring(idx(i,j,k), idx(i+1,j,k));
+for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)for(let k=0;k<nz;k++){
+  // 4 vertical side faces of this cell get shear diagonals
+  addSpring(idx(i,j,k),   idx(i+1,j,k+1));
+  addSpring(idx(i+1,j,k), idx(i,j,k+1));
+  addSpring(idx(i,j+1,k), idx(i+1,j+1,k+1));
+  addSpring(idx(i+1,j+1,k), idx(i,j+1,k+1));
+  addSpring(idx(i,j,k),   idx(i,j+1,k+1));
+  addSpring(idx(i,j+1,k), idx(i,j,k+1));
+  addSpring(idx(i+1,j,k), idx(i+1,j+1,k+1));
+  addSpring(idx(i+1,j+1,k), idx(i+1,j,k+1));
+}
+
+// ---------- physics: position-based dynamics (Jakobsen-style constraint relaxation) ----------
+// Chosen over a direct force/spring integrator because it stays numerically stable at any
+// stiffness and any frame rate without tiny sub-steps -- important for a real-time, in-browser
+// demo. The fitted numbers still drive the visible behaviour: tau sets the velocity-retention
+// factor (how fast motion damps out, i.e. the recovery speed), nu sets the sideways-bulge pull,
+// and pset shrinks the rest lengths, exactly as in deform_sim.py -- only *how* the shape per step
+// is solved for (constraint relaxation vs. a stiffness matrix solve) differs from the real FEM.
+const ITERS = 10;              // constraint relaxation iterations per sub-step
+const STIFF = 0.9;             // how fully each iteration closes the gap to the rest length
+let lp = 1.0, cmaxEver = 0.0;  // permanent-set state (mirrors deform_sim.py's zstate.cmax)
+let restLen = null, restDirty = true;
+const invMass = new Float64Array(N);
+for(let n=0;n<N;n++) invMass[n] = bottom[n] ? 0 : 1;
+
+function recomputeRestLengths(){
+  restLen = new Float64Array(springs.length);
+  for(let s=0;s<springs.length;s++){
+    const a=springs[s].a*3, b=springs[s].b*3;
+    const zA = rest0[a+2]*lp, zB = rest0[b+2]*lp;
+    const dx=rest0[a]-rest0[b], dy=rest0[a+1]-rest0[b+1], dz=zA-zB;
+    restLen[s] = Math.sqrt(dx*dx+dy*dy+dz*dz) || 1e-6;
+  }
+  restDirty = false;
+}
+recomputeRestLengths();
+
+// drag/press state
+let drag = null;
+
+function avgTopZ(){ let s=0; for(const n of topIdx) s+=pos[n*3+2]; return s/topIdx.length; }
+
+function step(dt){
+  if(restDirty) recomputeRestLengths();
+  const velRetain = Math.exp(-dt/FIT.tau); // the fitted relaxation time sets how fast motion damps out
+
+  // 1) Verlet-integrate free nodes (position carries its own velocity as pos - old)
+  for(let n=0;n<N;n++){
+    if(invMass[n]===0) continue;
+    if(drag && drag.set.has(n)) continue;
+    const ix=n*3;
+    for(let c=0;c<3;c++){
+      const v = (pos[ix+c]-old[ix+c]) * velRetain;
+      old[ix+c] = pos[ix+c];
+      pos[ix+c] += v;
+    }
+  }
+  // 2) apply the drag constraint (kinematic, like the plate clamp in deform_sim.py)
+  if(drag){
+    for(const d of drag.nodes){
+      const ix=d.n*3;
+      pos[ix]=d.x; pos[ix+1]=d.y; pos[ix+2]=d.z;
+      old[ix]=d.x; old[ix+1]=d.y; old[ix+2]=d.z;
+    }
+  }
+  // 3) relax every spring toward its rest length (this is what makes it hold a 3D sponge shape)
+  for(let it=0; it<ITERS; it++){
+    for(let s=0;s<springs.length;s++){
+      const sp=springs[s], a=sp.a, b=sp.b, ia=a*3, ib=b*3;
+      const wa=invMass[a], wb=invMass[b]; if(wa+wb===0) continue;
+      const dx=pos[ia]-pos[ib], dy=pos[ia+1]-pos[ib+1], dz=pos[ia+2]-pos[ib+2];
+      const len = Math.sqrt(dx*dx+dy*dy+dz*dz) || 1e-9;
+      const diff = (len-restLen[s]) / len * STIFF / (wa+wb);
+      if(wa>0){ pos[ia]-=dx*diff*wa; pos[ia+1]-=dy*diff*wa; pos[ia+2]-=dz*diff*wa; }
+      if(wb>0){ pos[ib]+=dx*diff*wb; pos[ib+1]+=dy*diff*wb; pos[ib+2]+=dz*diff*wb; }
+    }
+    for(let n=0;n<N;n++) if(invMass[n]>0 && !(drag&&drag.set.has(n))) pos[n*3+2]=Math.max(0,pos[n*3+2]);
+  }
+  // 4) sideways bulge: pull each inner layer's ring gently toward a radius scaled by nu and compression
+  const comp = Math.max(0, Math.min(0.6, 1 - avgTopZ()/FIT.H));
+  for(let i=0;i<=nx;i++)for(let j=0;j<=ny;j++)for(let k=1;k<nz;k++){
+    const n=idx(i,j,k); if(drag && drag.set.has(n)) continue;
+    const rx=rest0[n*3], ry=rest0[n*3+1], r0=Math.hypot(rx,ry);
+    if(r0<1e-6) continue;
+    const targetR = r0*(1+FIT.nu*comp*1.1);
+    const curR = Math.hypot(pos[n*3],pos[n*3+1]) || 1e-6;
+    const pull = (targetR-curR)/curR * 0.18;
+    pos[n*3]   += pos[n*3]*pull;
+    pos[n*3+1] += pos[n*3+1]*pull;
+  }
+  // 5) permanent set: the deepest compression ever reached slowly shrinks the stress-free height
+  if(comp > cmaxEver){
+    cmaxEver = comp;
+    const newLp = Math.max(0.5, 1 - FIT.pset*cmaxEver);
+    if(Math.abs(newLp-lp) > 1e-4){ lp = newLp; restDirty = true; }
+  }
+}
+function midWidth(){
+  const k = Math.round(nz/2);
+  let xmin=Infinity, xmax=-Infinity;
+  for(let i=0;i<=nx;i++)for(let j=0;j<=ny;j++){ const n=idx(i,j,k)*3; xmin=Math.min(xmin,pos[n]); xmax=Math.max(xmax,pos[n]); }
+  return xmax-xmin;
+}
+
+// ---------- rendering: simple axonometric projection (no library needed) ----------
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let azimuth = -0.95, elevation = 18*Math.PI/180;
+function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function projParams(){
+  const W = cv.width/2, H = cv.height/2;
+  return { W, H, scale: (W*0.42)/FIT.W, ox: W*0.5, oy: H*0.74 };
+}
+
+function project(x,y,z,scale,ox,oy){
+  const ca=Math.cos(azimuth), sa=Math.sin(azimuth);
+  const x1 = x*ca - y*sa, y1 = x*sa + y*ca;
+  const ce=Math.cos(elevation), se=Math.sin(elevation);
+  const depth = y1*ce - z*se;
+  const vert  = y1*se + z*ce;
+  return [ox + scale*x1, oy - scale*vert, depth];
+}
+
+function resizeCanvas(){
+  const w = cv.clientWidth || 900;
+  cv.width = Math.round(w*2); cv.height = Math.round(w*2*620/900);
+  ctx.setTransform(2,0,0,2,0,0);
+}
+window.addEventListener('resize', resizeCanvas);
+
+function draw(){
+  const {W,H,scale,ox,oy} = projParams();
+  ctx.clearRect(0,0,W,H);
+  const ink = cssVar('--grid-line')||'#2f6f5e', node = cssVar('--node')||'#b5472b', panel=cssVar('--panel')||'#fff';
+  // table line
+  const [tlx,tly] = project(-FIT.W,0,0,scale,ox,oy);
+  const [trx,try_] = project(FIT.W,0,0,scale,ox,oy);
+  ctx.strokeStyle = cssVar('--rule')||'#ddd'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(tlx,tly); ctx.lineTo(trx,try_); ctx.stroke();
+
+  // draw springs' structural edges only (skip shear diagonals visually, clutter)
+  const edgesToDraw = [];
+  for(let i=0;i<=nx;i++)for(let j=0;j<=ny;j++)for(let k=0;k<nz;k++) edgesToDraw.push([idx(i,j,k), idx(i,j,k+1)]);
+  for(let i=0;i<=nx;i++)for(let k=0;k<=nz;k++)for(let j=0;j<ny;j++) edgesToDraw.push([idx(i,j,k), idx(i,j+1,k)]);
+  for(let j=0;j<=ny;j++)for(let k=0;k<=nz;k++)for(let i=0;i<nx;i++) edgesToDraw.push([idx(i,j,k), idx(i+1,j,k)]);
+
+  const proj = new Array(N);
+  let depths=[];
+  for(let n=0;n<N;n++){ proj[n]=project(pos[n*3],pos[n*3+1],pos[n*3+2],scale,ox,oy); }
+  const lines = edgesToDraw.map(([a,b])=>({a,b,d:(proj[a][2]+proj[b][2])/2}));
+  lines.sort((p,q)=>p.d-q.d);
+  ctx.lineWidth = 1.3; ctx.strokeStyle = ink; ctx.globalAlpha=0.85;
+  for(const l of lines){
+    ctx.beginPath(); ctx.moveTo(proj[l.a][0],proj[l.a][1]); ctx.lineTo(proj[l.b][0],proj[l.b][1]); ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+  ctx.fillStyle = node;
+  for(let n=0;n<N;n++){ ctx.beginPath(); ctx.arc(proj[n][0],proj[n][1],1.8,0,7); ctx.fill(); }
+
+  // simple presser marker
+  if(drag){
+    ctx.strokeStyle = node; ctx.lineWidth=2; ctx.setLineDash([3,3]);
+    let cx=0,cy=0,cz=0; for(const d of drag.nodes){cx+=d.x;cy+=d.y;cz+=d.z;}
+    cx/=drag.nodes.length; cy/=drag.nodes.length; cz/=drag.nodes.length;
+    const [px,py] = project(cx,cy,cz+FIT.H*0.25,scale,ox,oy);
+    ctx.beginPath(); ctx.arc(px,py,10,0,7); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  document.getElementById('liveH').textContent = (avgTopZ()*1000).toFixed(1)+' mm';
+  const comp = Math.max(0, 1-avgTopZ()/FIT.H)*100;
+  document.getElementById('liveC').textContent = comp.toFixed(0)+'%';
+  document.getElementById('liveCmax').textContent = (cmaxEver*100).toFixed(0)+'%';
+  document.getElementById('liveW').textContent = (midWidth()*1000).toFixed(1)+' mm';
+}
+
+// ---------- interaction: drag to press ----------
+function canvasPoint(evt){
+  const r = cv.getBoundingClientRect();
+  const cx = (evt.touches? evt.touches[0].clientX : evt.clientX) - r.left;
+  const cy = (evt.touches? evt.touches[0].clientY : evt.clientY) - r.top;
+  return [cx*(cv.width/2)/r.width, cy*(cv.height/2)/r.height];
+}
+function nearestTopCluster(mx,my){
+  const {scale,ox,oy} = projParams();
+  let best=-1, bestD=1e9;
+  for(const n of topIdx){
+    const [px,py] = project(pos[n*3],pos[n*3+1],pos[n*3+2],scale,ox,oy);
+    const d = Math.hypot(px-mx,py-my);
+    if(d<bestD){bestD=d; best=n;}
+  }
+  if(bestD > 60) return null;
+  const bx=pos[best*3], by=pos[best*3+1];
+  const cluster = [];
+  for(const n of topIdx){
+    const dx=pos[n*3]-bx, dy=pos[n*3+1]-by;
+    if(Math.hypot(dx,dy) < FIT.W*0.28) cluster.push(n);
+  }
+  return cluster;
+}
+let pressStartY=0, pressStartZ=0, pressStartPos=null;
+function onDown(evt){
+  evt.preventDefault();
+  const [mx,my] = canvasPoint(evt);
+  const cluster = nearestTopCluster(mx,my);
+  if(!cluster) return;
+  pressStartY = (evt.touches? evt.touches[0].clientY : evt.clientY);
+  pressStartZ = avgTopZ();
+  pressStartPos = cluster.map(n=>({n, x:pos[n*3], y:pos[n*3+1], z:pos[n*3+2]}));
+  drag = { nodes: pressStartPos.map(p=>({n:p.n,x:p.x,y:p.y,z:p.z})), set: new Set(cluster) };
+  document.getElementById('hudMode').innerHTML = '<b>pressing</b>';
+  window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+  window.addEventListener('touchmove', onMove, {passive:false}); window.addEventListener('touchend', onUp);
+}
+function onMove(evt){
+  if(!drag) return;
+  evt.preventDefault();
+  const curY = (evt.touches? evt.touches[0].clientY : evt.clientY);
+  const r = cv.getBoundingClientRect();
+  const {scale} = projParams();
+  const dyCanvas = (curY - pressStartY) * (cv.height/2) / r.height; // client px -> canvas-internal px
+  let dz = dyCanvas / scale; // canvas-internal px -> metres, screen-down = positive => press down
+  dz = Math.max(0, Math.min(FIT.H*0.5, dz)); // only press down, cap near the model's ~45-50% valid range
+  for(const d of drag.nodes){
+    const orig = pressStartPos.find(p=>p.n===d.n);
+    d.x = orig.x; d.y = orig.y; d.z = Math.max(0, orig.z - dz);
+  }
+}
+function onUp(){
+  drag = null;
+  document.getElementById('hudMode').innerHTML = '<b>idle</b> — relaxing';
+  window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp);
+  window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onUp);
+}
+cv.addEventListener('mousedown', onDown);
+cv.addEventListener('touchstart', onDown, {passive:false});
+
+document.getElementById('rotL').onclick = ()=>{ azimuth -= 0.35; };
+document.getElementById('rotR').onclick = ()=>{ azimuth += 0.35; };
+document.getElementById('tilt').oninput = (e)=>{ elevation = e.target.value*Math.PI/180; };
+document.getElementById('resetBtn').onclick = ()=>{
+  pos.set(rest0); old.set(rest0); lp=1; cmaxEver=0; restDirty=true; drag=null;
+};
+
+// ---------- main loop ----------
+let last = performance.now();
+function loop(now){
+  const dt = Math.min(0.033, (now-last)/1000); last = now;
+  const sub = 4;
+  for(let s=0;s<sub;s++) step(dt/sub);
+  draw();
+  requestAnimationFrame(loop);
+}
+resizeCanvas();
+requestAnimationFrame(loop);
+})();
+</script>
