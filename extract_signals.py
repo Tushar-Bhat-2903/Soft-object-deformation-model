@@ -1,4 +1,26 @@
+"""extract_signals.py
 
+Turn one side-view video of a press-and-release into a .npz file the fitting code can read.
+Only the object's outline is tracked, frame by frame:
+
+  h_mm          height of the top surface
+  widths_mm     silhouette width at 20%, 50%, 80% of its current height
+  u_mm          plate height for kinematic clips (see below)
+  load_on       whether the known weight is resting on the object (load clips)
+
+The plate isn't tracked directly: while it's touching the object, its underside is the
+object's top surface, so plate height = measured top height during that stretch. Contact is
+assumed to start when the top first drops and end near the lowest point reached. Override
+with --t_contact / --t_release if that guess is wrong.
+
+Usage (kinematic press clip):
+  python extract_signals.py clip1.mp4 --out clip1.npz --obj_width_mm 60 --obj_depth_mm 60 \
+      --seed 640,400
+Usage (known weight resting on the object):
+  python extract_signals.py load.mp4 --out load.npz --obj_width_mm 60 --mode load --mass_g 200 \
+      --seed 640,400
+Find the seed pixel (x,y of a point on the object in the first frame) with:  --pick
+"""
 import argparse
 import sys
 
@@ -10,6 +32,7 @@ XIS = np.array([0.2, 0.5, 0.8])
 
 
 def hsv_range_from_seed(frame_bgr, seed, half=7, tol=(12, 70, 70)):
+    """Sample the colour around one clicked pixel and turn it into a lo/hi HSV range to track."""
     x, y = seed
     hsv = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2HSV)
     patch = hsv[max(0, y - half):y + half + 1, max(0, x - half):x + half + 1].reshape(-1, 3).astype(float)
@@ -21,6 +44,9 @@ def hsv_range_from_seed(frame_bgr, seed, half=7, tol=(12, 70, 70)):
 
 
 def segment(frame_bgr, lo, hi, min_area=400, anchor=None):
+    """Find the object in one frame: colour-threshold, clean up the mask, pick one blob.
+    Without anchor, takes the biggest blob (broke once when a hand entered frame). With anchor
+    (a box known to always sit on the object), picks whichever blob overlaps it most instead."""
     hsv = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2HSV)
     m = cv2.inRange(hsv, lo, hi)
     k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
@@ -41,6 +67,7 @@ def segment(frame_bgr, lo, hi, min_area=400, anchor=None):
 
 
 def width_at_row(mask, row):
+    """How wide the masked object is at one image row, in pixels."""
     r = int(round(row))
     if r < 0 or r >= mask.shape[0]:
         return np.nan
@@ -51,6 +78,7 @@ def width_at_row(mask, row):
 
 
 def top_row(mask, cx, half_band):
+    """Row of the topmost object pixel, averaged over a narrow band so it doesn't jitter."""
     c0 = int(max(0, cx - half_band))
     c1 = int(min(mask.shape[1], cx + half_band + 1))
     sub = mask[:, c0:c1]
@@ -62,6 +90,7 @@ def top_row(mask, cx, half_band):
 
 
 def fill_nan(a):
+    """Patch over frames where the object wasn't found by interpolating between good frames."""
     a = np.asarray(a, float).copy()
     bad = ~np.isfinite(a)
     if bad.all():
@@ -72,6 +101,7 @@ def fill_nan(a):
 
 
 def smooth(a, win=5):
+    """Light Savitzky-Golay smoothing to take pixel-level jitter out of the measured curve."""
     a = fill_nan(a)
     win = min(win, len(a) - (1 - len(a) % 2))
     if win < 5:
@@ -153,6 +183,7 @@ def main():
     cx = float(np.median((bb[:, 0] + bb[:, 1]) / 2))
     ybot = float(np.median(bb[:, 3]))
     ytop0 = float(np.median(bb[:, 2]))
+    # Anchor box: bottom quarter of the object's rest position, used to re-segment every frame.
     ax0, ax1 = int(np.median(bb[:, 0])), int(np.median(bb[:, 1]))
     ay1 = int(ybot)
     ay0 = int(ybot - 0.25 * (ybot - ytop0))
