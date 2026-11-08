@@ -1,3 +1,31 @@
+"""deform_sim.py
+
+The physics engine: a soft block built from tetrahedra, pushed on by a flat plate.
+
+Each tetrahedron resists being stretched or squashed according to a standard rubber-like
+material law, set by two numbers: E (stiffness) and nu (how much it bulges sideways when
+squeezed). Every node also carries some drag (zeta), which is what makes the block settle
+back down instead of bouncing.
+
+I'm dropping inertia on purpose. A stress wave crossing a sponge-sized block takes on the
+order of milliseconds; recovery after a press takes a few tenths of a second to a couple of
+seconds. That's a thousand-times gap, so instead of F = ma I just solve, at every step, for
+the velocity that balances the internal push-back against whatever's pressing on it.
+
+The bottom face is glued to the table. The top nodes move freely until the plate reaches
+them, then they're clamped to the plate's height and don't slide sideways - no slip, no
+friction model.
+
+Two ways to drive the simulation:
+  'kinematic' - the plate's height over time is given directly. This is the only option a
+                video actually supports, since a camera only shows you displacement.
+  'load'      - a known weight rests on top for a known stretch of time. This is what you'd
+                need to pin down stiffness on its own, since now you also know the force.
+
+Worth saying plainly: with displacement alone, you can only recover the ratio of damping to
+stiffness (that ratio sets how fast the thing recovers) - not stiffness by itself. For that
+you need a load clip.
+"""
 import itertools
 import numpy as np
 
@@ -64,8 +92,10 @@ class Block:
             self.band_cols = np.array([int(np.argmin(np.abs(xs)))])
 
     def internal_force(self, x, mu, lam, zinv=1.0):
-        """Nodal elastic force. zinv = 1/lp, with lp the permanent-set stretch of the stress-free height
-        (lp = 1: no set). Multiplicative split F = Fe Fp, Fp = diag(1, 1, lp) in the rest frame."""
+        """The elastic push-back force at every node. zinv is 1 when there's no permanent set; when
+        the sponge has settled into a shorter resting height after a hard press, zinv > 1 and it
+        shrinks the z-direction of the deformation gradient before computing stress, then un-shrinks
+        the resulting stress, so the material behaves as if its unstressed shape is already shorter."""
         t = self.tets
         xt = x[t]
         Ds = np.stack([xt[:, 1] - xt[:, 0], xt[:, 2] - xt[:, 0], xt[:, 3] - xt[:, 0]], axis=2)
@@ -91,7 +121,8 @@ class Block:
         return self.S @ Gn
 
     def tangent0(self, mu, lam):
-        """Sparse linear-elastic stiffness matrix (3N x 3N) at the rest configuration."""
+        """The stiffness matrix at the rest shape, built once and reused by the implicit solver below
+        so it isn't recomputed from scratch on every single time step."""
         import scipy.sparse as sp
         t = self.tets
         nT = t.shape[0]
@@ -140,6 +171,32 @@ def material(E, nu):
 
 def simulate(block, E, nu, zeta, scenario, xis=(0.2, 0.5, 0.8), keep_states=False,
              scheme="implicit", step_frac=0.01, kappa=3.0, substeps=None, pset=0.0):
+    """Run one scenario through the block and return what a camera would see at each frame time.
+
+    scenario keys:
+      t        : (T,) frame times in seconds, increasing, t[0] is the rest state
+      mode     : 'kinematic' or 'load'
+      u        : (T,) plate height in metres (kinematic); np.inf or nan where the plate is absent
+      load_on  : (T,) bool, load present between frame n and n+1 (load mode)
+      mass_kg  : load mass (load mode)
+
+    scheme picks how each time step is solved:
+      'implicit' - solves a small linear system each step instead of stepping forward directly.
+                   That lets it take much bigger steps without the simulation blowing up, which
+                   matters because the fitting code below runs thousands of these. Step size is
+                   capped relative to how fast the material actually relaxes.
+      'explicit' - the plain forward-Euler way. Only stable with tiny steps, so it's slow, but
+                   it's a useful independent check that the implicit scheme gives the same answer.
+
+    pset: permanent-set coefficient, 0 to 0.6. The stress-free height shrinks a bit every time the
+      block is pressed deeper than it's ever been pressed before, and never grows back. pset = 0
+      turns this off and gives you the plain elastic model.
+    substeps: if given, forces this many equal sub-steps per video frame. Without this the number
+      of steps can jump around slightly as the optimizer nudges E/nu/zeta between trials, which
+      makes the fit noisy, so fitting always passes a fixed substeps count.
+
+    Returns a dict with h_top (T,), widths (T, len(xis)), and states (T,N,3) if keep_states.
+    """
     import scipy.sparse as sp
     import scipy.sparse.linalg as spla
     t = np.asarray(scenario["t"], float)
