@@ -1,22 +1,3 @@
-"""deform_sim.py
-
-3D viscoelastic finite-element proxy of a soft block pressed by a flat plate.
-
-Model (all assumptions are deliberate and listed in README.md):
-  * Geometry: box W x D x H (metres), z up, meshed with tetrahedra (Kuhn split of a hex grid).
-  * Elasticity: compressible neo-Hookean, parameters E (Pa) and nu.
-  * Damping: viscous drag on every node, force = -zeta * V_node * velocity (zeta in N s / m^4).
-  * Inertia is neglected (quasi-static, first-order dynamics): zeta*V_n*dx/dt = f_internal + f_external.
-    Justification: inertial time ~ H / sqrt(E/rho) ~ milliseconds, recovery time ~ 0.1 to 1 s.
-  * Boundary: bottom face glued to the table; top nodes slide freely until the plate touches
-    them, then are clamped to the plate height and stick laterally (sticky contact).
-  * Two drive modes:
-      'kinematic': the plate height u(t) is prescribed (measured from video); nodes cannot pass it.
-      'load'     : a known mass sits on the top face (uniform pressure) between load_on/off times.
-
-Only the ratio zeta/E is identifiable from displacement-only clips; a 'load' clip (known force) is
-what makes E itself identifiable.
-"""
 import itertools
 import numpy as np
 
@@ -159,24 +140,6 @@ def material(E, nu):
 
 def simulate(block, E, nu, zeta, scenario, xis=(0.2, 0.5, 0.8), keep_states=False,
              scheme="implicit", step_frac=0.01, kappa=3.0, substeps=None, pset=0.0):
-    """Simulate a scenario and return observables at scenario['t'] (seconds).
-
-    scenario keys:
-      t        : (T,) frame times in seconds, increasing, t[0] is the rest state
-      mode     : 'kinematic' or 'load'
-      u        : (T,) plate height in metres (kinematic); np.inf or nan where the plate is absent
-      load_on  : (T,) bool, load present between frame n and n+1 (load mode)
-      mass_kg  : load mass (load mode)
-    scheme:
-      'implicit' : linearly implicit step  (C + dt K0) dx = dt f(x), K0 = rest tangent stiffness.
-                   Stable for large steps; step size capped at step_frac * zeta*H^2/E.
-      pset       : permanent-set coefficient in [0, 0.6). The stress-free height shrinks to
-                   lp = 1 - pset * c_max, with c_max the deepest compression fraction reached so far
-                   (mean top-node height vs rest). pset = 0 reproduces the pure elastic model.
-      substeps   : if given, use this many equal steps per frame (smooth in the parameters; used for fitting)
-      'explicit' : forward Euler, step limited by the stiffest element (slow, used as a reference).
-    Returns dict with h_top (T,), widths (T, len(xis)), and states (T,N,3) if keep_states.
-    """
     import scipy.sparse as sp
     import scipy.sparse.linalg as spla
     t = np.asarray(scenario["t"], float)
