@@ -1,18 +1,4 @@
-"""fit_params.py
 
-Fit the FEM proxy to one or more training clips (output of extract_signals.py).
-
-Free parameters: log E (Pa), log zeta (N s / m^4), nu.
-  * If at least one clip has mode 'load' (known weight => known force), E is identified.
-  * Otherwise only the ratio zeta/E is identifiable from displacements, so E is fixed to --E_fixed and
-    the reported zeta is conditional on that choice (tau = zeta*H^2/E is the meaningful number).
-
-Loss: robust (soft-L1) least squares on top height (after release / under load) and silhouette widths.
-Uncertainty: Gauss-Newton covariance (J^T J)^-1 * s^2 at the optimum (parameters in log space).
-
-Usage:
-  python fit_params.py --clips clipA.npz clipB.npz load.npz --out fit.json --report fit_report.png
-"""
 import argparse
 import json
 import os
