@@ -1,25 +1,4 @@
-"""extract_signals.py
 
-Turn one side-view video of a soft block being pressed and released into a signals file (.npz)
-that the fitting code can use. Everything is measured from the object's silhouette:
-
-  h_mm          height of the top surface (centre band) above the table
-  widths_mm     silhouette width at 20%, 50%, 80% of the current height
-  u_mm          plate height (kinematic clips): equals h_mm while the plate touches, +inf otherwise
-  load_on       True while the known weight rests on the object (load clips)
-
-The plate is not tracked. While it touches the object its underside IS the object's top surface, so
-u = h during contact. Contact starts when the top first drops, and ends at the last frame near the
-minimum height (the plate must be lifted away quickly). Override with --t_contact / --t_release.
-
-Usage (kinematic press clip):
-  python extract_signals.py clip1.mp4 --out clip1.npz --obj_width_mm 60 --obj_depth_mm 60 \
-      --seed 640,400
-Usage (known weight resting on the object):
-  python extract_signals.py load.mp4 --out load.npz --obj_width_mm 60 --mode load --mass_g 200 \
-      --seed 640,400
-Find the seed pixel (x,y of a point on the object in the first frame) with:  --pick
-"""
 import argparse
 import sys
 
