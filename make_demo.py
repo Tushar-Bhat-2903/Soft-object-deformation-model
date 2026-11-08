@@ -1,8 +1,8 @@
 """make_demo.py
 
-Side-by-side demo video: real clip | simulated response | overlay, with the height curve underneath.
-The simulated panel is driven only by the measured plate motion (or load timing) of the clip and the fitted
-material parameters, not by replaying the measured object motion.
+Builds a three-panel comparison video: real footage, simulation, overlay, with a height graph
+underneath. The simulated panel is a real simulation driven by the plate's measured motion and
+the fitted parameters, not a replay of what the video showed.
 
 Usage:
   python make_demo.py --fit fit.json --clip holdout.npz --out demo.mp4
@@ -20,6 +20,8 @@ from fitlib import load_clip, run_clip
 
 
 def outline_and_wire(states_t, block, cx, ybot, s_m):
+    """Project the 3D mesh at one instant into the video's 2D pixel space: a filled silhouette
+    plus a wireframe of the front face."""
     g = states_t.reshape(block.nx + 1, block.ny + 1, block.nz + 1, 3)
     zk = g[:, :, :, 2].mean(axis=(0, 1))
     xmin = g[:, :, :, 0].min(axis=(0, 1))
