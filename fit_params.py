@@ -1,4 +1,17 @@
+"""fit_params.py
 
+Takes one or more clips from extract_signals.py and finds the material parameters that make
+the simulator best match what the video shows.
+
+If a clip has a known weight on it, stiffness (E) can be recovered too. Without one, only the
+damping/stiffness ratio is identifiable, so E is fixed to an assumed value (--E_fixed) instead.
+Fits in log space (E, zeta span orders of magnitude) with an outlier-robust loss, and reports
+uncertainty from the fit's own sensitivity to noise - a reasonable estimate of random error,
+but not of anything systematically wrong with the model itself.
+
+Usage:
+  python fit_params.py --clips clipA.npz clipB.npz load.npz --out fit.json --report fit_report.png
+"""
 import argparse
 import json
 import os
@@ -60,6 +73,8 @@ def main():
         res = list(pool.map(run_clip, jobs))
         return np.concatenate([residuals_of(c, r, a.sigma_h, a.sigma_w) for c, r in zip(clips, res)])
 
+    # Try a few starting guesses and keep whichever run ends with the lowest cost, since the fit
+    # can get stuck in a worse local minimum depending on where it starts.
     lb, ub, starts = [], [], []
     E0 = a.E0 if has_load else a.E_fixed
     for f in (0.5, 1.0, 2.0):
@@ -93,9 +108,9 @@ def main():
     r = sol.fun
     n, p = len(r), len(sol.x)
     J = sol.jac
-    s2 = float(np.sum(r ** 2) / max(n - p, 1))
+    s2 = float(np.sum(r ** 2) / max(n - p, 1))  # how far off the fit is, per data point
     sv = np.linalg.svd(J, compute_uv=False)
-    cond = float(sv[0] / max(sv[-1], 1e-30))
+    cond = float(sv[0] / max(sv[-1], 1e-30))  # big = some parameter is poorly constrained
     try:
         cov = s2 * np.linalg.inv(J.T @ J)
         std = np.sqrt(np.clip(np.diag(cov), 0, None))
