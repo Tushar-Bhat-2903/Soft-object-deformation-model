@@ -90,7 +90,20 @@ not fully recovering after a hard press.
 stiffer if pressed fast, sliding/friction effects, or anything not visible from one camera angle
 (since only the outline is measured, nothing inside the sponge is actually observed).
 
-## 7. How to run it
+## 7. Interactive demo
+
+`simulator.html` is a standalone, no-install interactive version: the same mesh shape and
+fitted numbers (stiffness, damping, recovery time, permanent set), running live in a browser.
+Click and drag the block to press it, let go to watch it recover. It's a real-time
+approximation (a mass-spring model), not the actual solver below (that one is too slow to run
+at 60 frames per second), but it's tuned to behave the same way the fit found.
+
+To open it: it's a webpage, not a program, so double-clicking it may try to open it in a code
+editor instead of a browser depending on your computer's settings. Right-click `simulator.html`
+-> "Open with" -> choose Chrome, Edge, or any browser. It then runs entirely in that browser tab,
+no install or internet connection needed.
+
+## 8. How to run it
 
 ```
 pip install -r requirements.txt
@@ -113,7 +126,7 @@ The `synth/` folder is a sanity check I ran first on computer-generated videos w
 answers, to make sure the whole pipeline recovers the right numbers before trusting it on real
 footage.
 
-## 8. Credits
+## 9. Credits
 
 Built with Claude (Anthropic) as a coding assistant. Libraries: NumPy, SciPy, OpenCV, Matplotlib.
 The physics approach (tetrahedral mesh, neo-Hookean material) follows standard finite-element
