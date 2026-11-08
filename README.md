@@ -25,7 +25,23 @@ I also added one extra piece specific to this real sponge: after a hard press it
 spring back to its original height, so I let the model's "rest" height shrink a little after a
 deep press, instead of always snapping back to exactly where it started.
 
-## 2. What I measured from the video, and why
+## 2. What the 3D mesh actually looks like
+
+The block above isn't just a flat side-view shape — it's a real 3D grid of points (150 of them,
+connected into little tetrahedra), simulated in all three dimensions. The image below renders
+that mesh from an angle at four moments of a real press: at rest, at the deepest point of the
+press, right after the plate lifts off, and once it's settled.
+
+![3D mesh at rest, deepest press, just after release, and recovered](real/mesh3d.png)
+
+You can see the top layer drop during the press, the sides bulge out slightly (that's the
+Poisson effect), and the top not quite return to its starting height afterward (the permanent
+set). Made with `visualize_mesh3d.py`, which re-renders any clip this way:
+```
+python visualize_mesh3d.py --fit real/fit.json --clip real/press1.npz --out real/mesh3d.png
+```
+
+## 3. What I measured from the video, and why
 
 Everything comes from the sponge's outline (silhouette) in a fixed side-on video:
 
@@ -40,7 +56,7 @@ To get the actual stiffness, you'd need a clip with a known weight resting on it
 one, so the stiffness number in my results is an assumption, not something measured — only the
 damping (and the Poisson's ratio) are properly fitted from video.
 
-## 3. How the fit works
+## 4. How the fit works
 
 I simulate the block under the plate motion read from the video, and compare the simulated height
 and widths against what the video actually shows. An optimizer adjusts the model's parameters
@@ -48,7 +64,7 @@ until the simulation matches the video as closely as possible. I do this on two 
 the fit isn't overfitting to one clip's quirks), then test the result on a third, completely
 separate clip the fit never saw.
 
-## 4. Results
+## 5. Results
 
 **Object:** a rectangular foam sponge, ~70 mm wide, ~56 mm tall, single material throughout.
 
@@ -69,7 +85,7 @@ expected to stay accurate), so this result mostly shows the model's behaviour ou
 zone rather than a clean validation. See `real/` for the figures and the side-by-side demo video
 (`real/demo_final.mp4`).
 
-## 5. Assumptions
+## 6. Assumptions
 
 1. Side view stands in for the full 3D shape; depth is assumed, not measured from this camera angle.
 2. One uniform material throughout the sponge (no soft/hard regions).
@@ -81,7 +97,7 @@ zone rather than a clean validation. See `real/` for the figures and the side-by
    my clips went deeper than that, which is the main weakness of this result.
 7. No separate weight clip was filmed, so stiffness (E) is an assumption, not a measured result.
 
-## 6. What it can and can't do
+## 7. What it can and can't do
 
 **Can:** show a soft block compressing and springing back, bulging sideways, and (approximately)
 not fully recovering after a hard press.
@@ -90,7 +106,7 @@ not fully recovering after a hard press.
 stiffer if pressed fast, sliding/friction effects, or anything not visible from one camera angle
 (since only the outline is measured, nothing inside the sponge is actually observed).
 
-## 7. Interactive demo
+## 8. Interactive demo
 
 `simulator.html` is a standalone, no-install interactive version: the same mesh shape and
 fitted numbers (stiffness, damping, recovery time, permanent set), running live in a browser.
@@ -103,7 +119,7 @@ editor instead of a browser depending on your computer's settings. Right-click `
 -> "Open with" -> choose Chrome, Edge, or any browser. It then runs entirely in that browser tab,
 no install or internet connection needed.
 
-## 8. How to run it
+## 9. How to run it
 
 ```
 pip install -r requirements.txt
@@ -126,7 +142,7 @@ The `synth/` folder is a sanity check I ran first on computer-generated videos w
 answers, to make sure the whole pipeline recovers the right numbers before trusting it on real
 footage.
 
-## 9. Credits
+## 10. Credits
 
 Built with Claude (Anthropic) as a coding assistant. Libraries: NumPy, SciPy, OpenCV, Matplotlib.
 The physics approach (tetrahedral mesh, neo-Hookean material) follows standard finite-element
