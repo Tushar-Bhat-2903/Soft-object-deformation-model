@@ -1,0 +1,19 @@
+{
+ "clip": "synth/holdout.npz",
+ "rmse_height_mm_after_release": 0.44495033328253464,
+ "rmse_widths_mm": 0.1335942600068829,
+ "rmse_height_pct_of_compression": 2.8439119183507526,
+ "compression_mm": 15.645714285714277,
+ "params": {
+  "E_Pa": 14204.019778652759,
+  "nu": 0.3030560310345934,
+  "zeta": 1243500.9805257085,
+  "tau_slow_s": 0.21886427221021057,
+  "E_identified": true
+ },
+ "baseline_1d_exp": {
+  "tau1_s": 0.0717143380387678,
+  "rmse_height_mm_after_release": 0.17965158060777606
+ },
+ "band_height_mm_mean_p5_p95_width_after_release": 0.018365324673132642
+}

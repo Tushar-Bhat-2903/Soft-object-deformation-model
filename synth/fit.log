@@ -1,0 +1,13 @@
+clips: [('pressA.npz', 'kinematic'), ('pressB.npz', 'kinematic'), ('load.npz', 'load')]
+E identified: True ; rough recovery time constant 0.075 s
+start 0: cost 61.254  params [ 9.561 14.033  0.303]
+start 1: cost 61.256  params [ 9.561 14.033  0.303]
+start 2: cost 61.256  params [ 9.561 14.033  0.303]
+
+FIT RESULT
+  E = 1.42e+04 Pa 
+  nu = 0.303
+  zeta = 1.24e+06 N s/m^4  ->  slow relaxation time tau = zeta*H^2/E = 0.219 s
+  1-sigma (log-space for E,zeta; absolute for nu): {'logE': np.float64(0.005), 'logzeta': np.float64(0.014), 'nu': np.float64(0.001)}
+  reduced chi2 = 0.18 ; Jacobian condition number = 1.1e+01
+saved synth/fit.json synth/fit_report.png

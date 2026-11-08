@@ -1,0 +1,19 @@
+{
+ "clip": "real\\run2.npz",
+ "rmse_height_mm_after_release": 4.693710994685492,
+ "rmse_widths_mm": 2.668053000857851,
+ "rmse_height_pct_of_compression": 13.844553987967968,
+ "compression_mm": 33.90294117647058,
+ "params": {
+  "E_Pa": 30000.0,
+  "nu": 0.0630148837600075,
+  "zeta": 6344506.876350727,
+  "tau_slow_s": 0.6593532083560343,
+  "E_identified": false
+ },
+ "baseline_1d_exp": {
+  "tau1_s": 0.26951957911308605,
+  "rmse_height_mm_after_release": 4.771909327265374
+ },
+ "band_height_mm_mean_p5_p95_width_after_release": 0.8225292550646711
+}
