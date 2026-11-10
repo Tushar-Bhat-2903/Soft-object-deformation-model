@@ -12,18 +12,11 @@ side-by-side comparison video).
 
 The sponge is represented as a small 3D block made of tetrahedra (like a rough, chunky 3D mesh),
 not a single rigid shape. Each little piece of the block can stretch and compress, following a
-standard rubber-like material law (how hard it pushes back depends on how much it's squeezed, set
-by two numbers: stiffness `E` and Poisson's ratio `nu`, which controls how much it bulges sideways
-when squeezed). There's also a damping/drag term `zeta` that controls how fast it springs back
-rather than bouncing forever.
+standard rubber-like material law.
 
 The bottom of the block is glued to the table. A flat plate presses the top down and then lifts
 away. I ignore inertia, since the sponge is too light and slow-moving for that to matter; it just
 relaxes back according to its stiffness and damping, like a spring in honey.
-
-I also added one extra piece specific to this real sponge: after a hard press it didn't fully
-spring back to its original height, so I let the model's "rest" height shrink a little after a
-deep press, instead of always snapping back to exactly where it started.
 
 ## 2. What the 3D mesh actually looks like
 
