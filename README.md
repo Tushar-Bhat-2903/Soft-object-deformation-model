@@ -112,11 +112,6 @@ Add a load clip (known weight resting on the plate) with `--mode load --mass_g <
 `extract_signals.py` step, and include it in `fit_params.py --clips` to actually measure stiffness
 instead of assuming it.
 
-The `real/` folder has my own run of this (videos, extracted data, the fit, and the demo video).
-The `synth/` folder is a sanity check I ran first on computer-generated videos with known-true
-answers, to make sure the whole pipeline recovers the right numbers before trusting it on real
-footage.
-
 https://drive.google.com/drive/u/0/folders/1k4xeaoR7jhPRRhNyPI6G49Lbctl8CA-T
 The photos and videos are attached in this google drive link for access 
 
