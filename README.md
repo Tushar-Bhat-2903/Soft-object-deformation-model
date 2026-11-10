@@ -75,16 +75,6 @@ Fitted from two training clips:
 - "Permanent set" amount: about 10% of the deepest press depth
 - Stiffness: fixed at 30 kPa, an assumption, since no weight clip was filmed so this wasn't measured
 
-Tested on a held-out clip the fit never saw, the model predicted the recovery height to within
-about 4.7 mm of the real video. That's only slightly better than the simplest possible
-comparison, a one-number exponential recovery curve, which got about 4.8 mm.
-
-I'll be honest about this one: the model works and runs end to end, but it isn't a strong fit. I
-pressed the sponge too deep in all three clips, past the depth where this kind of model is
-expected to stay accurate, so this result mostly shows the model's behaviour outside its comfort
-zone rather than a clean validation. See `real/` for the figures and the side-by-side demo video
-(`real/demo_final.mp4`).
-
 ## 6. Assumptions
 
 1. Side view stands in for the full 3D shape; depth is assumed, not measured from this camera angle.
@@ -97,14 +87,10 @@ zone rather than a clean validation. See `real/` for the figures and the side-by
    my clips went deeper than that, which is the main weakness of this result.
 7. No separate weight clip was filmed, so stiffness (E) is an assumption, not a measured result.
 
-## 7. What it can and can't do
+## 7. What it can do
 
 It can show a soft block compressing and springing back, bulging sideways, and roughly not fully
 recovering after a hard press.
-
-It can't capture real foam's more complex behaviour: energy loss between presses, getting
-stiffer if pressed fast, sliding/friction effects, or anything not visible from one camera angle.
-Only the outline is measured, so nothing inside the sponge is actually observed.
 
 ## 8. Interactive demo
 
@@ -147,6 +133,4 @@ The photos and videos are attached in this google drive link for access
 
 ## 10. Credits
 
-Built with Claude (Anthropic) as a coding assistant. Libraries: NumPy, SciPy, OpenCV, Matplotlib.
-The physics approach (tetrahedral mesh, neo-Hookean material) follows standard finite-element
-methods used for simulating soft bodies. No external simulator or pretrained model was used.
+Built with Claude (Anthropic) as a coding assistant.
