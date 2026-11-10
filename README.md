@@ -4,10 +4,6 @@ I filmed a foam sponge being pressed and released, and built a simple 3D physics
 I then used the video to figure out the sponge's stiffness and damping (by fitting the model to
 what the video shows), and tested the fitted model on a fresh press it had never seen.
 
-**Pipeline:** `extract_signals.py` (turns a video into numbers) -> `fit_params.py` (fits the model
-to those numbers) -> `validate_holdout.py` (tests the fit on a new clip) -> `make_demo.py` (makes a
-side-by-side comparison video).
-
 ## 1. The model, in plain terms
 
 The sponge is represented as a small 3D block made of tetrahedra (like a rough, chunky 3D mesh),
